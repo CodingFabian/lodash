@@ -380,17 +380,6 @@
   }
 
   /**
-   * Used by `_.max` and `_.min` as the default callback for string values.
-   *
-   * @private
-   * @param {string} string The string to inspect.
-   * @returns {number} Returns the code unit of the first character of the string.
-   */
-  function charAtCallback(string) {
-    return string.charCodeAt(0);
-  }
-
-  /**
    * Used by `_.trim` and `_.trimLeft` to get the index of the first character
    * of `string` that is not found in `chars`.
    *
@@ -987,6 +976,14 @@
        * @type boolean
        */
       support.funcNames = typeof Function.name == 'string';
+
+      /**
+       * Detect if string indexes are non-enumerable (IE < 9, RingoJS, Rhino, Narwhal).
+       *
+       * @memberOf _.support
+       * @type boolean
+       */
+      support.nonEnumStrings = !propertyIsEnumerable.call('x', 0);
 
       /**
        * Detect if the DOM is supported.
@@ -3894,34 +3891,6 @@
     }
 
     /**
-     * Gets the extremum value of `collection` invoking `iteratee` for each value
-     * in `collection` to generate the criterion by which the value is ranked.
-     * The `iteratee` is invoked with three arguments: (value, index, collection).
-     *
-     * @private
-     * @param {Array|Object|string} collection The collection to iterate over.
-     * @param {Function} iteratee The function invoked per iteration.
-     * @param {boolean} [isMin] Specify returning the minimum, instead of the
-     *  maximum, extremum value.
-     * @returns {*} Returns the extremum value.
-     */
-    function extremumBy(collection, iteratee, isMin) {
-      var exValue = isMin ? POSITIVE_INFINITY : NEGATIVE_INFINITY,
-          computed = exValue,
-          result = computed;
-
-      baseEach(collection, function(value, index, collection) {
-        var current = iteratee(value, index, collection);
-        if ((isMin ? (current < computed) : (current > computed)) ||
-            (current === exValue && current === result)) {
-          computed = current;
-          result = value;
-        }
-      });
-      return result;
-    }
-
-    /**
      * Gets the appropriate "callback" function. If the `_.callback` method is
      * customized this function returns the custom method, otherwise it returns
      * the `baseCallback` function. If arguments are provided the chosen function
@@ -4457,7 +4426,8 @@
           support = lodash.support;
 
       var allowIndexes = length && isLength(length) &&
-        (isArray(object) || (support.nonEnumArgs && isArguments(object)));
+        (isArray(object) || (support.nonEnumStrings && isString(object)) ||
+          (support.nonEnumArgs && isArguments(object)));
 
       var index = -1,
           result = [];
@@ -9460,7 +9430,7 @@
         path = last(path);
         result = object != null && hasOwnProperty.call(object, path);
       }
-      return result;
+      return result || (lodash.support.nonEnumStrings && isString(object) && isIndex(path, object.length));
     }
 
     /**
@@ -9580,7 +9550,7 @@
       }
       var length = object.length;
       length = (length && isLength(length) &&
-        (isArray(object) || (support.nonEnumArgs && isArguments(object))) && length) || 0;
+        (isArray(object) || isArguments(object)) && length) || 0;
 
       var Ctor = object.constructor,
           index = -1,
